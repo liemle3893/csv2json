@@ -18,7 +18,7 @@ $ go install github.com/liemlhd3893/csv2json
 
 ### How to use
 
-1. We need a definition about how CSV was organized. Here the sample config file
+1. We need a definition about how CSV was organized. Here the sample config `config.hcl`
 
 ```hcl
 # Where csv will be organized
@@ -101,6 +101,12 @@ directory "user_info" {
 		default = "PING"
 	}
 }
+```
+
+2. And now we can have our result
+
+```shell
+$ csv2json -c config.hcl
 ```
 
 For more information. Take a look at [samples](https://github.com/liemle3893/csv2json/blob/master/samples) package.
