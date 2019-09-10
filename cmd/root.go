@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	c "github.com/liemle3893/csv2json/config"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	c "github.com/liemle3893/csv2json/config"
 
 	"github.com/spf13/cobra"
 )

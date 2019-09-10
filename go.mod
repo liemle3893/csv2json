@@ -1,4 +1,4 @@
-module encoding
+module github.com/liemle3893/csv2json
 
 go 1.13
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/cmd"
+	"github.com/liemle3893/csv2json/cmd"
 )
 
 func main() {
