@@ -103,4 +103,4 @@ directory "user_info" {
 }
 ```
 
-For more information. Take a look at [samples](https://github.com/liemlhd/csv2json/sample) package.
+For more information. Take a look at [samples](https://github.com/liemle3893/csv2json/blob/master/samples) package.
