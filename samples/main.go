@@ -1,7 +1,7 @@
 package main
 
 import (
-	c "encoding/config"
+	c "github.com/liemle3893/csv2json/config"
 	"io/ioutil"
 	"log"
 )
