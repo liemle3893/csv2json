@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"encoding/csv"
 	"encoding/json"
-	"github.com/liemle3893/csv2json/parser"
-	"github.com/liemle3893/csv2json/util"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+
+	"github.com/liemle3893/csv2json/parser"
+	"github.com/liemle3893/csv2json/util"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -31,7 +34,8 @@ type Directory struct {
 	Separator         string             `hcl:"separator"`
 	Columns           []ColumnDefinition `hcl:"column"`
 	AdditionalColumns []ColumnDefinition `hcl:"additional_column"`
-	Skip              bool               `hcl:"skip"` // Skip this directory
+	Skip              bool               `hcl:"skip"`        // Skip this directory
+	SkipHeader        bool               `hcl:"skip_header"` // Skip first line
 	IncludePatterns   []string           `hcl:"include"`
 	ExcludePatterns   []string           `hcl:"exclude"`
 }
@@ -117,6 +121,8 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 
 // Exec export data from CSV to JSON
 func (c *Config) Exec() {
+	var wg sync.WaitGroup
+	var reporter = make(chan int)
 	for _, dir := range c.Directories {
 		directory := path.Join(c.RootPath, dir.Path)
 		outDirectory := path.Join(c.OutPath, dir.Path)
@@ -126,40 +132,67 @@ func (c *Config) Exec() {
 		files, _ := util.ListFiles(directory, dir.IncludePatterns, dir.ExcludePatterns)
 		for _, file := range files {
 			inFile := path.Join(directory, file.Name())
-
 			var extension = filepath.Ext(file.Name())
 			var outFile = path.Join(outDirectory, file.Name())
 			outFile = outFile[0:len(outFile)-len(extension)] + ".json"
-			f, err := os.Open(inFile)
-			if err != nil {
-				continue
-			}
-			r := csv.NewReader(bufio.NewReader(f))
-			if "" != dir.Separator {
-				r.Comma = rune(dir.Separator[0])
-			}
-			r.Comment = '#'
-			writer, err := os.Create(outFile)
-			defer writer.Close()
-			for {
-				record, err := r.Read()
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					log.Fatal(err)
-				}
-				data, err := dir.Parse(record)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				jsonData, err := json.Marshal(data)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				writer.Write(jsonData)
-			}
+			wg.Add(1)
+			go func(f os.FileInfo) {
+				parseFile(inFile, outFile, dir, f)
+				reporter <- 1
+			}(file)
 		}
+	}
+
+	go func() {
+		var fileCounter = 0
+		for i := range reporter {
+			fileCounter += i
+			printProcess(fileCounter)
+		}
+	}()
+	wg.Wait()
+	close(reporter)
+}
+
+func printProcess(count int) {
+	// fmt.Printf("\r%s", strings.Repeat(" ", 35))
+	fmt.Printf("\r%d file(s) processed", (count))
+}
+
+func parseFile(inputFile, outoutFile string, dir Directory, file os.FileInfo) {
+	f, err := os.Open(inputFile)
+	if err != nil {
+		return
+	}
+	r := csv.NewReader(bufio.NewReader(f))
+	if len(dir.Separator) > 0 {
+		r.Comma = rune(dir.Separator[0])
+	}
+	r.Comment = '#'
+	writer, err := os.Create(outoutFile)
+	defer writer.Close()
+	var firstLine = true
+	for {
+		if firstLine && dir.SkipHeader {
+			firstLine = false
+			continue
+		}
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Fatal(err)
+		}
+		data, err := dir.Parse(record)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		writer.WriteString(string(jsonData) + "\n")
 	}
 }
