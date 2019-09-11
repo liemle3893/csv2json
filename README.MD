@@ -7,13 +7,13 @@ Problem is CSV has no correct format. So I decide to write my own tools to conve
 ### Get it!
 
 ```shell
-$ go get github.com/liemlhd3893/csv2json
+$ go get github.com/liemle3893/csv2json
 ```
 
 ### Install it!
 
 ```shell
-$ go install github.com/liemlhd3893/csv2json
+$ go install github.com/liemle3893/csv2json
 ```
 
 ### How to use
