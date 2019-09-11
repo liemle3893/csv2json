@@ -137,6 +137,7 @@ func (c *Config) Exec() {
 			outFile = outFile[0:len(outFile)-len(extension)] + ".json"
 			wg.Add(1)
 			go func(f os.FileInfo) {
+				defer wg.Done()
 				parseFile(inFile, outFile, dir, f)
 				reporter <- 1
 			}(file)
