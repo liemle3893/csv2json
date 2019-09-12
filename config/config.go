@@ -181,6 +181,7 @@ func parseFile(inputFile, outoutFile string, dir Directory, file os.FileInfo) {
 	if len(dir.Separator) > 0 {
 		r.Comma = rune(dir.Separator[0])
 	}
+	r.FieldsPerRecord = -1 // Support variable number of fields.
 	r.Comment = '#'
 	writer, err := os.Create(outoutFile)
 	defer writer.Close()
