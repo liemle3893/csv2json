@@ -104,7 +104,9 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 				if parser, err := parser.FindParser(column.Type); err == nil {
 					// Get column value
 					var columnValue string
-					if ci >= len(record) {
+					if ci >= len(record) || len(record[ci]) == 0 {
+						// If record does not have enough fields or record[ci] is empty
+						// Then columnValue will be default value.
 						columnValue = column.DefaultValue
 					} else {
 						columnValue = record[ci]
