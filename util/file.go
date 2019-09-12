@@ -3,6 +3,7 @@ package util
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 )
 
@@ -17,6 +18,10 @@ func ListFiles(directory string,
 		return []os.FileInfo{}, err
 	}
 
+	if len(includePatterns) == 0 {
+		// Default to include all file in folder
+		includePatterns = []string{".*"}
+	}
 	includeMatcher := createPatterns(includePatterns)
 	excludeMatcher := createPatterns(excludePatterns)
 	for _, file := range files {
@@ -40,4 +45,11 @@ func createPatterns(patterns []string) *RegexesMatcher {
 		regexes = append(regexes, r)
 	}
 	return &RegexesMatcher{regexes: regexes}
+}
+
+// RemoveFileExtention remove file ext.
+// Example: file.RemoveFileExtention("abc.a") will return "abc"
+func RemoveFileExtention(fileName string) string {
+	var extension = filepath.Ext(fileName)
+	return fileName[0 : len(fileName)-len(extension)]
 }

@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -42,12 +41,13 @@ type Directory struct {
 
 // ColumnDefinition column definition
 type ColumnDefinition struct {
-	Name         string `hcl:",key"`
-	Type         string `hcl:"type"` // Only support Float, Int, String, Boolean, StringArray, IntArray, FloatArray, BooleanArray
-	Path         string `hcl:"path"`
-	Separator    string `hcl:"separator"` // Only mean in case of Array
-	Skip         bool   `hcl:"skip"`      // Skip this columns
-	DefaultValue string `hcl:"default"`   // Must set if type was a additional column
+	Name         string                 `hcl:",key"`
+	Type         string                 `hcl:"type"` // Only support Float, Int, String, Boolean, StringArray, IntArray, FloatArray, BooleanArray
+	Path         string                 `hcl:"path"`
+	Separator    string                 `hcl:"separator"` // Only mean in case of Array
+	Skip         bool                   `hcl:"skip"`      // Skip this columns
+	DefaultValue string                 `hcl:"default"`   // Must set if type was a additional column
+	Indices      map[string]interface{} `hcl:"indices"`
 }
 
 // ColumnsDefinition is alias for []ColumnDefinition
@@ -101,15 +101,24 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 				}
 				currentData = currentData[piece].(map[string]interface{})
 			} else {
-				if p, err := parser.FindParser(column.Type); err == nil {
+				if parser, err := parser.FindParser(column.Type); err == nil {
+					// Get column value
 					var columnValue string
 					if ci >= len(record) {
 						columnValue = column.DefaultValue
 					} else {
 						columnValue = record[ci]
 					}
-					v, _ := p.Parse(columnValue)
-					currentData[piece] = v
+					// If indexed --> Data
+					if parser.IsIndexed() {
+						if val, ok := column.Indices[columnValue]; ok {
+							currentData[piece] = val
+						}
+					} else {
+						// Else parse data
+						v, _ := parser.Parse(columnValue)
+						currentData[piece] = v
+					}
 				} else {
 					return errors.Wrap(err, "Parser not found. "+column.Type)
 				}
@@ -132,9 +141,7 @@ func (c *Config) Exec() {
 		files, _ := util.ListFiles(directory, dir.IncludePatterns, dir.ExcludePatterns)
 		for _, file := range files {
 			inFile := path.Join(directory, file.Name())
-			var extension = filepath.Ext(file.Name())
-			var outFile = path.Join(outDirectory, file.Name())
-			outFile = outFile[0:len(outFile)-len(extension)] + ".json"
+			outFile := util.RemoveFileExtention(path.Join(outDirectory, file.Name()))
 			wg.Add(1)
 			go func(f os.FileInfo) {
 				defer wg.Done()

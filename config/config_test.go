@@ -1,29 +1,35 @@
-package config
+package config_test
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/liemle3893/csv2json/config"
 )
 
 func TestConfigParsing(t *testing.T) {
-	expected := &Config{
+	expected := &config.Config{
 		RootPath: ".",
 		OutPath:  "./out",
-		Directories: []Directory{
-			Directory{
+		Directories: []config.Directory{
+			config.Directory{
 				Path:            "user_action",
 				Separator:       "",
 				IncludePatterns: []string{".*"},
 				ExcludePatterns: []string{},
-				Columns: []ColumnDefinition{
-					ColumnDefinition{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
-					ColumnDefinition{Name: "b", Type: "Boolean", Skip: true, Path: "b"},
+				Columns: []config.ColumnDefinition{
+					config.ColumnDefinition{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
+					config.ColumnDefinition{Name: "b", Type: "Boolean", Skip: true, Path: "b", Indices: map[string]interface{}{
+						"idx1": "1",
+						"idx2": "2",
+					}},
 				},
 			},
 		},
 	}
 
-	config, err := ParseConfig(configTxt)
+	config, err := config.ParseConfig(configTxt)
+	t.Logf("%+v\n", config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,6 +54,7 @@ directory "user_action" {
 		type = "Boolean"
 		path = "b"
 		skip = true
+		indices = { "idx1" = "1", "idx2" = "2" }
 	}	
 }
 `

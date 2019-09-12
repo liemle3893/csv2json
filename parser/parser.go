@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -8,14 +9,20 @@ import (
 // Parser parse value to correct type
 type Parser interface {
 	Parse(value string) (interface{}, error)
+	IsIndexed() bool
 }
 
 type parserWrapper struct {
-	f ParseFunc
+	f       ParseFunc
+	indexed bool
 }
 
-func (p parserWrapper) Parse(value string) (interface{}, error) {
+func (p *parserWrapper) Parse(value string) (interface{}, error) {
 	return p.f(value)
+}
+
+func (p *parserWrapper) IsIndexed() bool {
+	return p.indexed
 }
 
 // ParseFunc is wrapper function for Parser
@@ -30,7 +37,12 @@ func Register(_type string, p Parser) {
 
 // RegisterWithFunc register new parser
 func RegisterWithFunc(_type string, f ParseFunc) {
-	typesConverter[_type] = parserWrapper{f}
+	typesConverter[_type] = &parserWrapper{f: f, indexed: false}
+}
+
+// RegisterIndexedFunc register new indexed parser
+func RegisterIndexedFunc(_type string, f ParseFunc) {
+	typesConverter[_type] = &parserWrapper{f: f, indexed: true}
 }
 
 // Unregister a parser
@@ -51,6 +63,7 @@ func createError(_type string) error {
 }
 
 func init() {
+	// Simple
 	RegisterWithFunc("Int", ParseFunc(func(value string) (interface{}, error) {
 		return strconv.ParseInt(value, 10, 64)
 	}))
@@ -62,5 +75,9 @@ func init() {
 	}))
 	RegisterWithFunc("Boolean", ParseFunc(func(value string) (interface{}, error) {
 		return strconv.ParseBool(value)
+	}))
+	// Indexed
+	RegisterWithFunc("Indexed", ParseFunc(func(value string) (interface{}, error) {
+		return nil, errors.New("Unsupported operation")
 	}))
 }
