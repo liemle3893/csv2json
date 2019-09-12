@@ -113,6 +113,8 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 					if parser.IsIndexed() {
 						if val, ok := column.Indices[columnValue]; ok {
 							currentData[piece] = val
+						} else {
+							currentData[piece], _ = column.Indices[column.DefaultValue]
 						}
 					} else {
 						// Else parse data
@@ -133,6 +135,9 @@ func (c *Config) Exec() {
 	var wg sync.WaitGroup
 	var reporter = make(chan int)
 	for _, dir := range c.Directories {
+		if dir.Skip {
+			continue
+		}
 		directory := path.Join(c.RootPath, dir.Path)
 		outDirectory := path.Join(c.OutPath, dir.Path)
 		if err := os.MkdirAll(outDirectory, 0755); err != nil {
@@ -141,7 +146,7 @@ func (c *Config) Exec() {
 		files, _ := util.ListFiles(directory, dir.IncludePatterns, dir.ExcludePatterns)
 		for _, file := range files {
 			inFile := path.Join(directory, file.Name())
-			outFile := util.RemoveFileExtention(path.Join(outDirectory, file.Name()))
+			outFile := util.RemoveFileExtention(path.Join(outDirectory, file.Name())) + ".json"
 			wg.Add(1)
 			go func(f os.FileInfo) {
 				defer wg.Done()

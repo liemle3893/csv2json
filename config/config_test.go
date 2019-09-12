@@ -19,17 +19,20 @@ func TestConfigParsing(t *testing.T) {
 				ExcludePatterns: []string{},
 				Columns: []config.ColumnDefinition{
 					config.ColumnDefinition{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
-					config.ColumnDefinition{Name: "b", Type: "Boolean", Skip: true, Path: "b", Indices: map[string]interface{}{
+					config.ColumnDefinition{Name: "b", Type: "Boolean", Skip: true, Path: "b"},
+					config.ColumnDefinition{Name: "d", Type: "Indexed", Skip: true, Path: "b", Indices: map[string]interface{}{
 						"idx1": "1",
 						"idx2": "2",
-					}},
+					}, DefaultValue: "idx1"},
 				},
 			},
 		},
 	}
 
 	config, err := config.ParseConfig(configTxt)
+
 	t.Logf("%+v\n", config)
+	t.Logf("%+v\n", expected)
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,7 +57,13 @@ directory "user_action" {
 		type = "Boolean"
 		path = "b"
 		skip = true
-		indices = { "idx1" = "1", "idx2" = "2" }
 	}	
+	column "d" {
+		type = "Indexed"
+		path = "b"
+		skip = true
+		default = "idx1"
+		indices = { "idx1" = "1", "idx2" = "2" }
+	}		
 }
 `
