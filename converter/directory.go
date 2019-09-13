@@ -100,6 +100,10 @@ func (c *directoryConverter) convert0(csvReader io.Reader, jsonWriter io.StringW
 			log.Println(err)
 			continue
 		}
+		if data == nil {
+			// Skip record
+			continue
+		}
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			log.Println(err)

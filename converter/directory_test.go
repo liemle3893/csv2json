@@ -3,8 +3,8 @@ package converter
 import (
 	"bytes"
 	"github.com/liemle3893/csv2json/config"
+	_ass "github.com/liemle3893/csv2json/testing/assert"
 	"github.com/magiconair/properties/assert"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -15,19 +15,18 @@ func TestFileConverter_Convert(t *testing.T) {
 	dirConfig := config.Directories[0]
 	c := &directoryConverter{DirectoryConfig: dirConfig}
 
-	reader := strings.NewReader("a_string,false,idx1")
+	reader := strings.NewReader("a_string,false,idx1\na_string,false,idx5")
 	writer := &bytes.Buffer{}
 	row := c.convert0(reader, writer)
 
 	// JSON response
-	expectedJSON := "{\"a\":\"a_string\",\"b\":false,\"d\":\"11\"}"
+	expectedJSON := `{"a":"a_string","b":false,"d":"11"}`
 	receivedJson := writer.String()
-	t.Logf("%+v, %+v", reflect.TypeOf(expectedJSON), reflect.TypeOf(receivedJson))
+	t.Logf("%+v, %+v", expectedJSON, receivedJson)
 	assert.Equal(t, row, uint32(1), "Processed record should be 1")
 	t.Run("Compare result", func(t *testing.T) {
-		if receivedJson != receivedJson {
-			t.Error("Invalid JSON")
-		}
+		t.Helper()
+		_ass.AreEqualJSON(t, receivedJson, expectedJSON, "Invalid JSON")
 	})
 }
 
@@ -50,8 +49,9 @@ directory "user_action" {
 	column "d" {
 		type = "Indexed"
 		path = "d"
-		default = "idx1"
+		default = "idx2"
 		indices = { "idx1" = "11", "idx2" = "2" }
-	}		
+		excludes = ["idx5"]
+	}
 }
 `
