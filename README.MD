@@ -70,36 +70,25 @@ directory "user_action" {
 
 
 directory "user_info" {
+    // Include all file but except *.exe
     include = [ ".*" ]
-    exclude = [  ]
+    exclude = [ "*.exe" ]
+    // Set file separator to tab
 	separator = "\t"
-	column "a" {
-		type = "Int"
-		path = "a.s.a"
-	}
-	column "b" {
-		type = "String"
-		path = "a.s.b"
-		skip = true
-	}	
-	column "c" {
-		type = "String"
-		path = "a.s.c"
-	}				
-	column "d" {
-		type = "Boolean"
-		path = "a.s.d"
-	}
-	column "d" {
-		type = "String"
-		path = "a.s.ip"
-		default = "127.0.0.1"
-	}		
-	additional_column "type" {
-		type = "String"
-		path = "a.type"
-		default = "PING"
-	}
+    column "exclude" {
+        type = "String"
+        // Record at this index with value 'test' will be skipped
+        excludes = ["test"]
+    }
+    column "Indexed" {
+        type = "Indexed"
+        default = "undefied"
+        // Map
+        // web => Browser
+        // ios, android => Mobile
+        // other => Unknown
+        indices = {"undefied":"Unknown" "web"="Browser", "ios"="Mobile","android"="Mobile"}
+    } 
 }
 ```
 
