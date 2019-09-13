@@ -77,7 +77,7 @@ func init() {
 		return strconv.ParseBool(value)
 	}))
 	// Indexed
-	RegisterWithFunc("Indexed", ParseFunc(func(value string) (interface{}, error) {
+	RegisterIndexedFunc("Indexed", ParseFunc(func(value string) (interface{}, error) {
 		return nil, errors.New("Unsupported operation")
 	}))
 }

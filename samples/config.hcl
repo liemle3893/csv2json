@@ -12,11 +12,11 @@ directory "user_action" {
 		type = "String"
 		path = "a.s.b"
 		skip = true
-	}	
+	}
 	column "c" {
 		type = "String"
 		path = "a.s.c"
-	}				
+	}
 	column "d" {
 		type = "Boolean"
 		path = "a.s.d"
@@ -25,7 +25,7 @@ directory "user_action" {
 		type = "String"
 		path = "a.s.ip"
 		default = "127.0.0.1"
-	}		
+	}
 	additional_column "type" {
 		type = "String"
 		path = "a.type"
@@ -38,6 +38,7 @@ directory "user_info" {
     include = [ ".*" ]
     exclude = [  ]
 	separator = "\t"
+	skip = true
 	column "a" {
 		type = "Int"
 		path = "a.s.a"
@@ -46,11 +47,11 @@ directory "user_info" {
 		type = "String"
 		path = "a.s.b"
 		skip = true
-	}	
+	}
 	column "c" {
 		type = "String"
 		path = "a.s.c"
-	}				
+	}
 	column "d" {
 		type = "Boolean"
 		path = "a.s.d"
@@ -59,7 +60,7 @@ directory "user_info" {
 		type = "String"
 		path = "a.s.ip"
 		default = "127.0.0.1"
-	}		
+	}
 	additional_column "type" {
 		type = "String"
 		path = "a.type"

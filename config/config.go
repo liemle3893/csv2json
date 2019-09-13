@@ -1,30 +1,27 @@
 package config
 
 import (
-	"bufio"
-	"encoding/csv"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"path"
-	"strings"
-	"sync"
-
-	"github.com/liemle3893/csv2json/parser"
-	"github.com/liemle3893/csv2json/util"
-
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
+	"github.com/liemle3893/csv2json/parser"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // Config Root Config for file
 type Config struct {
 	RootPath    string      `hcl:"root"`
 	OutPath     string      `hcl:"out_directory"`
+	Concurrency rune        `hcl:"concurrency"`
 	Directories []Directory `hcl:"directory"`
+}
+
+// Validate config.
+func (c *Config) validate() error {
+	// TODO
+	if c.Concurrency == 0 {
+		c.Concurrency = 10
+	}
+	return nil
 }
 
 // Directory contains info about directory
@@ -33,8 +30,8 @@ type Directory struct {
 	Separator         string             `hcl:"separator"`
 	Columns           []ColumnDefinition `hcl:"column"`
 	AdditionalColumns []ColumnDefinition `hcl:"additional_column"`
-	Skip              bool               `hcl:"skip"`        // Skip this directory
-	SkipHeader        bool               `hcl:"skip_header"` // Skip first line
+	Skip              bool               `hcl:"skip"`            // Skip this directory
+	SkipFirstLine     bool               `hcl:"skip_first_line"` // Skip first line
 	IncludePatterns   []string           `hcl:"include"`
 	ExcludePatterns   []string           `hcl:"exclude"`
 }
@@ -58,17 +55,18 @@ type ColumnsDefinition struct {
 // ParseConfig parse the given HCL string into a Config struct.
 func ParseConfig(hclText string) (*Config, error) {
 	result := &Config{}
-	var errors *multierror.Error
 
 	hclParseTree, err := hcl.Parse(hclText)
 	if err != nil {
 		return nil, err
 	}
-
 	if err := hcl.DecodeObject(&result, hclParseTree); err != nil {
 		return nil, err
 	}
-	return result, errors.ErrorOrNil()
+	if err := result.validate(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 var nilSlice []string = nil
@@ -87,6 +85,7 @@ func (dir *Directory) Parse(record []string) (map[string]interface{}, error) {
 	return data, nil
 }
 
+// Read single record into map[string]interface{} (JSON)
 func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []string) error {
 	for ci, column := range c.columns {
 		if column.Skip {
@@ -96,12 +95,14 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 		var currentData map[string]interface{} = root
 		for i, piece := range pieces {
 			if (i + 1) < len(pieces) {
+				// Node ---> Make new JsonPath
 				if _, ok := currentData[piece]; !ok {
 					currentData[piece] = make(map[string]interface{})
 				}
 				currentData = currentData[piece].(map[string]interface{})
 			} else {
-				if parser, err := parser.FindParser(column.Type); err == nil {
+				// Leaf ---> Value
+				if p, err := parser.FindParser(column.Type); err == nil {
 					// Get column value
 					var columnValue string
 					if ci >= len(record) || len(record[ci]) == 0 {
@@ -112,7 +113,7 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 						columnValue = record[ci]
 					}
 					// If indexed --> Data
-					if parser.IsIndexed() {
+					if p.IsIndexed() {
 						if val, ok := column.Indices[columnValue]; ok {
 							currentData[piece] = val
 						} else {
@@ -120,7 +121,7 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 						}
 					} else {
 						// Else parse data
-						v, _ := parser.Parse(columnValue)
+						v, _ := p.Parse(columnValue)
 						currentData[piece] = v
 					}
 				} else {
@@ -130,85 +131,4 @@ func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []str
 		}
 	}
 	return nil
-}
-
-// Exec export data from CSV to JSON
-func (c *Config) Exec() {
-	var wg sync.WaitGroup
-	var reporter = make(chan int)
-	for _, dir := range c.Directories {
-		if dir.Skip {
-			continue
-		}
-		directory := path.Join(c.RootPath, dir.Path)
-		outDirectory := path.Join(c.OutPath, dir.Path)
-		if err := os.MkdirAll(outDirectory, 0755); err != nil {
-			log.Fatalf("Cannot create out directory. %+v", err)
-		}
-		files, _ := util.ListFiles(directory, dir.IncludePatterns, dir.ExcludePatterns)
-		for _, file := range files {
-			inFile := path.Join(directory, file.Name())
-			outFile := util.RemoveFileExtention(path.Join(outDirectory, file.Name())) + ".json"
-			wg.Add(1)
-			go func(f os.FileInfo) {
-				defer wg.Done()
-				parseFile(inFile, outFile, dir, f)
-				reporter <- 1
-			}(file)
-		}
-	}
-
-	go func() {
-		var fileCounter = 0
-		for i := range reporter {
-			fileCounter += i
-			printProcess(fileCounter)
-		}
-	}()
-	wg.Wait()
-	close(reporter)
-}
-
-func printProcess(count int) {
-	// fmt.Printf("\r%s", strings.Repeat(" ", 35))
-	fmt.Printf("\r%d file(s) processed", (count))
-}
-
-func parseFile(inputFile, outoutFile string, dir Directory, file os.FileInfo) {
-	f, err := os.Open(inputFile)
-	if err != nil {
-		return
-	}
-	r := csv.NewReader(bufio.NewReader(f))
-	if len(dir.Separator) > 0 {
-		r.Comma = rune(dir.Separator[0])
-	}
-	r.FieldsPerRecord = -1 // Support variable number of fields.
-	r.Comment = '#'
-	writer, err := os.Create(outoutFile)
-	defer writer.Close()
-	var firstLine = true
-	for {
-		if firstLine && dir.SkipHeader {
-			firstLine = false
-			continue
-		}
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatal(err)
-		}
-		data, err := dir.Parse(record)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		jsonData, err := json.Marshal(data)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		writer.WriteString(string(jsonData) + "\n")
-	}
 }

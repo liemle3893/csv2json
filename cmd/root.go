@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/liemle3893/csv2json/converter"
 	"io/ioutil"
+	"log"
 	"os"
 
 	c "github.com/liemle3893/csv2json/config"
@@ -29,10 +31,10 @@ var rootCmd = &cobra.Command{
 		}
 		config, err := c.ParseConfig(string(configText))
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(100)
+			log.Fatalf("Invalid configuration. %+v", err)
 		}
-		config.Exec()
+		converter := converter.NewConverter(config)
+		converter.Convert()
 	},
 }
 

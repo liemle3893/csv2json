@@ -2,6 +2,7 @@ package main
 
 import (
 	c "github.com/liemle3893/csv2json/config"
+	"github.com/liemle3893/csv2json/converter"
 	"io/ioutil"
 	"log"
 )
@@ -9,13 +10,11 @@ import (
 func main() {
 	testConfig, _ := ioutil.ReadFile("config.hcl")
 	config, err := c.ParseConfig(string(testConfig))
-
 	if err != nil {
 		log.Printf("Error: %v", err)
 	} else {
 		log.Printf("%+v\n", config)
 	}
-	log.Printf("\n\n\n\n")
-
-	config.Exec()
+	converter := converter.NewConverter(config)
+	converter.Convert()
 }

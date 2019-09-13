@@ -9,8 +9,9 @@ import (
 
 func TestConfigParsing(t *testing.T) {
 	expected := &config.Config{
-		RootPath: ".",
-		OutPath:  "./out",
+		RootPath:    ".",
+		OutPath:     "./out",
+		Concurrency: 10,
 		Directories: []config.Directory{
 			config.Directory{
 				Path:            "user_action",
@@ -36,6 +37,7 @@ func TestConfigParsing(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	config.Validate()
 	if !reflect.DeepEqual(config, expected) {
 		t.Error("Config structure differed from expectation")
 	}
