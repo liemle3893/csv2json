@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/hashicorp/hcl"
+	"github.com/liemle3893/csv2json/json"
 	"github.com/liemle3893/csv2json/parser"
 	"github.com/pkg/errors"
 	"strings"
@@ -71,9 +72,9 @@ func ParseConfig(hclText string) (*Config, error) {
 
 var nilSlice []string = nil
 
-// Parse csv record into map[string]interface{}
-func (dir *Directory) Parse(record []string) (map[string]interface{}, error) {
-	data := make(map[string]interface{})
+// Parse csv record into json.JsonObject
+func (dir *Directory) Parse(record []string) (json.JsonObject, error) {
+	data := json.NewJsonObject()
 	additionalColumns := ColumnsDefinition{dir.AdditionalColumns}
 	if err := additionalColumns.readRecord(data, nilSlice); err != nil {
 		return nil, err
@@ -85,23 +86,25 @@ func (dir *Directory) Parse(record []string) (map[string]interface{}, error) {
 	return data, nil
 }
 
-// Read single record into map[string]interface{} (JSON)
-func (c *ColumnsDefinition) readRecord(root map[string]interface{}, record []string) error {
+// Read single record into json.JsonObject
+func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) error {
 	for ci, column := range c.columns {
 		if column.Skip {
 			continue
 		}
 		pieces := strings.Split(column.Path, ".")
-		var currentData map[string]interface{} = root
+		var currentData json.JsonObject = root
 		for i, piece := range pieces {
 			if (i + 1) < len(pieces) {
-				// Node ---> Make new JsonPath
-				if _, ok := currentData[piece]; !ok {
-					currentData[piece] = make(map[string]interface{})
+				// Handle JsonNode
+				if _, ok := currentData.Get(piece); !ok {
+					// Make new JsonPath
+					currentData.Put(piece, json.NewJsonObject())
 				}
-				currentData = currentData[piece].(map[string]interface{})
+				// Data always exists at this point.
+				currentData, _ = currentData.GetObject(piece)
 			} else {
-				// Leaf ---> Value
+				// Handle Json Leaf
 				if p, err := parser.FindParser(column.Type); err == nil {
 					// Get column value
 					var columnValue string

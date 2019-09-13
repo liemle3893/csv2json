@@ -1,5 +1,5 @@
-root = "."
-out_directory = "./out"
+root = "./samples"
+out_directory = "./samples/out"
 
 directory "user_action" {
     include = [ ".*" ]
@@ -38,7 +38,6 @@ directory "user_info" {
     include = [ ".*" ]
     exclude = [  ]
 	separator = "\t"
-	skip = true
 	column "a" {
 		type = "Int"
 		path = "a.s.a"

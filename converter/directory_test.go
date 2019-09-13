@@ -13,7 +13,7 @@ func TestFileConverter_Convert(t *testing.T) {
 
 	config, _ := config.ParseConfig(configTxt)
 	dirConfig := config.Directories[0]
-	c := &directoryConverter{DirectoryConfig: &dirConfig}
+	c := &directoryConverter{DirectoryConfig: dirConfig}
 
 	reader := strings.NewReader("a_string,false,idx1")
 	writer := &bytes.Buffer{}

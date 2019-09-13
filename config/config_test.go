@@ -13,15 +13,15 @@ func TestConfigParsing(t *testing.T) {
 		OutPath:     "./out",
 		Concurrency: 10,
 		Directories: []config.Directory{
-			config.Directory{
+			{
 				Path:            "user_action",
 				Separator:       "",
 				IncludePatterns: []string{".*"},
 				ExcludePatterns: []string{},
 				Columns: []config.ColumnDefinition{
-					config.ColumnDefinition{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
-					config.ColumnDefinition{Name: "b", Type: "Boolean", Skip: true, Path: "b"},
-					config.ColumnDefinition{Name: "d", Type: "Indexed", Skip: true, Path: "b", Indices: map[string]interface{}{
+					{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
+					{Name: "b", Type: "Boolean", Skip: true, Path: "b"},
+					{Name: "d", Type: "Indexed", Skip: true, Path: "b", Indices: map[string]interface{}{
 						"idx1": "1",
 						"idx2": "2",
 					}, DefaultValue: "idx1"},
@@ -37,7 +37,6 @@ func TestConfigParsing(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	config.Validate()
 	if !reflect.DeepEqual(config, expected) {
 		t.Error("Config structure differed from expectation")
 	}

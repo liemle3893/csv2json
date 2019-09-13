@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -59,7 +58,7 @@ func FindParser(_type string) (Parser, error) {
 }
 
 func createError(_type string) error {
-	return fmt.Errorf("Cannot find parser for type: %v", _type)
+	return errors.New("cannot find parser for type. " + _type)
 }
 
 func init() {
@@ -78,6 +77,6 @@ func init() {
 	}))
 	// Indexed
 	RegisterIndexedFunc("Indexed", ParseFunc(func(value string) (interface{}, error) {
-		return nil, errors.New("Unsupported operation")
+		return nil, errors.New("unsupported operation")
 	}))
 }
