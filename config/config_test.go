@@ -18,7 +18,7 @@ func TestConfigParsing(t *testing.T) {
 				Separator:       "",
 				IncludePatterns: []string{".*"},
 				ExcludePatterns: []string{},
-				Columns: []config.ColumnDefinition{
+				Columns: []*config.ColumnDefinition{
 					{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
 					{Name: "b", Type: "Boolean", Skip: true, Path: "b"},
 					{Name: "d", Type: "Indexed", Skip: true, Path: "b", Indices: map[string]interface{}{
