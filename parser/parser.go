@@ -58,7 +58,7 @@ func FindParser(_type string) (Parser, error) {
 }
 
 func createError(_type string) error {
-	return errors.New("cannot find parser for type. " + _type)
+	return errors.New("cannot find parser for type: " + _type + ".")
 }
 
 func init() {

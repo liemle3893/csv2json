@@ -1,24 +1,22 @@
-package config_test
+package config
 
 import (
 	"reflect"
 	"testing"
-
-	"github.com/liemle3893/csv2json/config"
 )
 
 func TestConfigParsing(t *testing.T) {
-	expected := &config.Config{
+	expected := &Config{
 		RootPath:    ".",
 		OutPath:     "./out",
 		Concurrency: 10,
-		Directories: []config.Directory{
+		Directories: []Directory{
 			{
 				Path:            "user_action",
 				Separator:       "",
 				IncludePatterns: []string{".*"},
 				ExcludePatterns: []string{},
-				Columns: []*config.ColumnDefinition{
+				Columns: []*ColumnDefinition{
 					{Name: "a", Type: "String", DefaultValue: "a default value", Path: "a"},
 					{Name: "b", Type: "Boolean", Skip: true, Path: "b"},
 					{Name: "d", Type: "Indexed", Skip: true, Path: "b", Indices: map[string]interface{}{
@@ -29,8 +27,9 @@ func TestConfigParsing(t *testing.T) {
 			},
 		},
 	}
+	expected.validate()
 
-	config, err := config.ParseConfig(configTxt)
+	config, err := ParseConfig(configTxt)
 
 	t.Logf("%+v\n", config)
 	t.Logf("%+v\n", expected)

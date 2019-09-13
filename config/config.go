@@ -46,16 +46,28 @@ type Directory struct {
 	SkipFirstLine     bool                `hcl:"skip_first_line"` // Skip first line
 	IncludePatterns   []string            `hcl:"include"`
 	ExcludePatterns   []string            `hcl:"exclude"`
+	columns           *ColumnsDefinition
+	additionalColumns *ColumnsDefinition
 }
 
 func (dir *Directory) validate() error {
 	var result error = nil
-	for _, column := range dir.Columns {
+	skipMap := make(map[int]map[string]bool)
+	for idx, column := range dir.Columns {
 		err := column.validate()
 		if err != nil {
 			result = multierror.Append(result, err)
 		}
+		if len(column.Excludes) > 0 {
+			excludeMap := make(map[string]bool)
+			for _, exclude := range column.Excludes {
+				excludeMap[exclude] = true
+			}
+			skipMap[idx] = excludeMap
+		}
 	}
+	dir.columns = &ColumnsDefinition{dir.Columns, skipMap}
+	dir.additionalColumns = &ColumnsDefinition{dir.AdditionalColumns, nil}
 	return result
 }
 
@@ -69,26 +81,16 @@ type ColumnDefinition struct {
 	DefaultValue string                 `hcl:"default"`   // Must set if type was a additional column
 	Indices      map[string]interface{} `hcl:"indices"`
 	Excludes     []string               `hcl:"excludes"` // Exclude value
-	excludeMap   map[string]bool
 }
 
 func (c *ColumnDefinition) validate() error {
-	if len(c.Excludes) > 0 {
-		c.excludeMap = make(map[string]bool)
-		for _, exclude := range c.Excludes {
-			c.excludeMap[exclude] = true
-		}
-	}
 	return nil
-}
-func (c *ColumnDefinition) shouldSkip(value string) bool {
-	_, ok := c.excludeMap[value]
-	return ok
 }
 
 // ColumnsDefinition is alias for []ColumnDefinition
 type ColumnsDefinition struct {
 	columns []*ColumnDefinition
+	skipMap map[int]map[string]bool
 }
 
 // ParseConfig parse the given HCL string into a Config struct.
@@ -113,11 +115,11 @@ var nilSlice []string = nil
 // Parse csv record into json.JsonObject
 func (dir *Directory) Parse(record []string) (json.JsonObject, error) {
 	data := json.NewJsonObject()
-	additionalColumns := ColumnsDefinition{dir.AdditionalColumns}
+	additionalColumns := dir.additionalColumns
 	if _, err := additionalColumns.readRecord(data, nilSlice); err != nil {
 		return nil, err
 	}
-	columns := ColumnsDefinition{dir.Columns}
+	columns := dir.columns
 	ok, err := columns.readRecord(data, record)
 	if err != nil {
 		return nil, err
@@ -131,6 +133,17 @@ func (dir *Directory) Parse(record []string) (json.JsonObject, error) {
 // Read single record into json.JsonObject.
 // Return true if record read success. False to skip read.
 func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) (bool, error) {
+	if c.skipMap != nil {
+		for ci, field := range record {
+			excludeMap, ok := c.skipMap[ci]
+			if ok {
+				if _, ok := excludeMap[field]; ok {
+					// There is field that should skip in record
+					return false, nil
+				}
+			}
+		}
+	}
 	for ci, column := range c.columns {
 		if column.Skip {
 			continue
@@ -158,9 +171,6 @@ func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) (b
 					} else {
 						columnValue = record[ci]
 					}
-					if column.shouldSkip(columnValue) {
-						return false, nil
-					}
 					// If indexed --> Data
 					if p.IsIndexed() {
 						if val, ok := column.Indices[columnValue]; ok {
@@ -174,7 +184,7 @@ func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) (b
 						currentData.Put(piece, v)
 					}
 				} else {
-					return true, errors.Wrap(err, "Parser not found. "+column.Type)
+					return true, errors.Wrap(err, "Parser not found for column: "+column.Name + "")
 				}
 			}
 		}
