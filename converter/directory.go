@@ -62,11 +62,16 @@ func (c *directoryConverter) convertFile(csvDirName, jsonDirName string, file os
 		return 0, err
 	}
 	w := bufio.NewWriterSize(jsonWriter, 4096*2) // 8KB buf size
-	rows := c.convert0(bufio.NewReader(csvReader), w)
+	rows := c.convert0(wrappedReader{bufio.NewReader(csvReader), fileName}, w)
 	if err := w.Flush(); err != nil {
 		return rows, err
 	}
 	return rows, err
+}
+
+type wrappedReader struct {
+	io.Reader
+	fileName string
 }
 
 func (c *directoryConverter) createCsvReader(reader io.Reader) *csv.Reader {
@@ -80,7 +85,7 @@ func (c *directoryConverter) createCsvReader(reader io.Reader) *csv.Reader {
 	return csvReader
 }
 
-func (c *directoryConverter) convert0(csvReader io.Reader, jsonWriter io.StringWriter) uint32 {
+func (c *directoryConverter) convert0(csvReader wrappedReader, jsonWriter io.StringWriter) uint32 {
 	var rowCount uint32 = 0
 	var firstLine = true
 	r := c.createCsvReader(csvReader)
@@ -93,7 +98,7 @@ func (c *directoryConverter) convert0(csvReader io.Reader, jsonWriter io.StringW
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatal(err)
+			log.Fatalf("\nFile: %s. Error. %+v.", csvReader.fileName, err)
 		}
 		data, err := c.DirectoryConfig.Parse(record)
 		if err != nil {
