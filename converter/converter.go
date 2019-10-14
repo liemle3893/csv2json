@@ -36,7 +36,7 @@ func (c *Converter) Convert() {
 	// Concurrently submit dirConverter
 	for _, dir := range dirs {
 		csvDir := path.Join(c.config.RootPath, dir.Path)
-		jsonDir := path.Join(c.config.OutPath, dir.Path)
+		jsonDir := path.Join(c.config.OutPath, dir.Output)
 		wg.Add(1)
 		convertersChan <- newDirectoryConverter(csvDir, jsonDir, dir)
 	}

@@ -46,6 +46,7 @@ type Directory struct {
 	SkipFirstLine     bool                `hcl:"skip_first_line"` // Skip first line
 	IncludePatterns   []string            `hcl:"include"`
 	ExcludePatterns   []string            `hcl:"exclude"`
+	Output            string              `hcl:"output"` // Default is Path
 	columns           *ColumnsDefinition
 	additionalColumns *ColumnsDefinition
 }
@@ -68,6 +69,9 @@ func (dir *Directory) validate() error {
 	}
 	dir.columns = &ColumnsDefinition{dir.Columns, skipMap}
 	dir.additionalColumns = &ColumnsDefinition{dir.AdditionalColumns, nil}
+	if len(strings.TrimSpace(dir.Output)) == 0 {
+		dir.Output = dir.Path
+	}
 	return result
 }
 
@@ -184,7 +188,7 @@ func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) (b
 						currentData.Put(piece, v)
 					}
 				} else {
-					return true, errors.Wrap(err, "Parser not found for column: "+column.Name + "")
+					return true, errors.Wrap(err, "Parser not found for column: "+column.Name+"")
 				}
 			}
 		}
