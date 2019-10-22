@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	testConfig, _ := ioutil.ReadFile("config.hcl")
+	testConfig, _ := ioutil.ReadFile("./samples/config.hcl")
 	config, err := c.ParseConfig(string(testConfig))
 	if err != nil {
 		log.Printf("Error: %v", err)

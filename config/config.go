@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/liemle3893/csv2json/json"
@@ -32,7 +31,6 @@ func (c *Config) validate() error {
 			result = multierror.Append(result, err)
 		}
 	}
-	fmt.Printf("Result: %+v", result)
 	return result
 }
 
@@ -54,21 +52,31 @@ type Directory struct {
 func (dir *Directory) validate() error {
 	var result error = nil
 	skipMap := make(map[int]map[string]bool)
+	includeMap := make(map[int]map[string]bool)
 	for idx, column := range dir.Columns {
 		err := column.validate()
 		if err != nil {
 			result = multierror.Append(result, err)
 		}
 		if len(column.Excludes) > 0 {
+			// Build exclude map
 			excludeMap := make(map[string]bool)
 			for _, exclude := range column.Excludes {
 				excludeMap[exclude] = true
 			}
 			skipMap[idx] = excludeMap
 		}
+		if len(column.Includes) > 0 {
+			// Build include only map
+			includes := make(map[string]bool)
+			for _, include := range column.Includes {
+				includes[include] = true
+			}
+			includeMap[idx] = includes
+		}
 	}
-	dir.columns = &ColumnsDefinition{dir.Columns, skipMap}
-	dir.additionalColumns = &ColumnsDefinition{dir.AdditionalColumns, nil}
+	dir.columns = &ColumnsDefinition{dir.Columns, skipMap, includeMap}
+	dir.additionalColumns = &ColumnsDefinition{dir.AdditionalColumns, nil, nil}
 	if len(strings.TrimSpace(dir.Output)) == 0 {
 		dir.Output = dir.Path
 	}
@@ -85,6 +93,7 @@ type ColumnDefinition struct {
 	DefaultValue string                 `hcl:"default"`   // Must set if type was a additional column
 	Indices      map[string]interface{} `hcl:"indices"`
 	Excludes     []string               `hcl:"excludes"` // Exclude value
+	Includes     []string               `hcl:"includes"` // Includes Value
 }
 
 func (c *ColumnDefinition) validate() error {
@@ -93,8 +102,9 @@ func (c *ColumnDefinition) validate() error {
 
 // ColumnsDefinition is alias for []ColumnDefinition
 type ColumnsDefinition struct {
-	columns []*ColumnDefinition
-	skipMap map[int]map[string]bool
+	columns    []*ColumnDefinition
+	skipMap    map[int]map[string]bool
+	includeMap map[int]map[string]bool
 }
 
 // ParseConfig parse the given HCL string into a Config struct.
@@ -137,7 +147,21 @@ func (dir *Directory) Parse(record []string) (json.JsonObject, error) {
 // Read single record into json.JsonObject.
 // Return true if record read success. False to skip read.
 func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) (bool, error) {
-	if c.skipMap != nil {
+	// Check for include only first
+	if c.includeMap != nil && len(c.includeMap) > 0 {
+		for ci, field := range record {
+			includeMap, ok := c.includeMap[ci]
+			if ok {
+				if _, ok := includeMap[field]; !ok {
+					// There is field that should skip in record
+					return false, nil
+				}
+			}
+		}
+	}
+
+	// Check for exclude
+	if c.skipMap != nil && len(c.skipMap) > 0 {
 		for ci, field := range record {
 			excludeMap, ok := c.skipMap[ci]
 			if ok {
@@ -148,6 +172,7 @@ func (c *ColumnsDefinition) readRecord(root json.JsonObject, record []string) (b
 			}
 		}
 	}
+
 	for ci, column := range c.columns {
 		if column.Skip {
 			continue
